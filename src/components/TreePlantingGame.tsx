@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import GradeSelector from './GradeSelector';
 import GameCard from './GameCard';
 import EnhancedGameBoard from './EnhancedGameBoard';
+import GameModeSelector, { GameMode } from './GameModeSelector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface GameProgress {
-  [key: string]: { [level: number]: boolean }; // grade -> level -> completed
+  [key: string]: { [level: number]: boolean };
 }
 
 const TreePlantingGame: React.FC = () => {
+  // NEW: Game mode state
+  const [gameMode, setGameMode] = useState<GameMode | null>(null);
+
   const [selectedGrade, setSelectedGrade] = useState<string>('kindergarten');
   const [currentLevel, setCurrentLevel] = useState<number | null>(null);
   const [gameProgress, setGameProgress] = useState<GameProgress>({});
 
-  // Load progress from localStorage
+  // Load saved progress
   useEffect(() => {
     const saved = localStorage.getItem('treePlantingProgress');
     if (saved) {
@@ -21,15 +24,19 @@ const TreePlantingGame: React.FC = () => {
     }
   }, []);
 
-  // Save progress to localStorage
+  // Save progress
   useEffect(() => {
     localStorage.setItem('treePlantingProgress', JSON.stringify(gameProgress));
   }, [gameProgress]);
+const gameModes: GameMode[] = [
+  { id: 'growth', name: 'Growth Mode', icon: '🌱', description: 'Focus on growing healthy trees', color: 'text-green-500' },
+  { id: 'grit', name: 'Grit Mode', icon: '💪', description: 'Overcome challenges and obstacles', color: 'text-orange-500' },
+  { id: 'speed', name: 'Speed Mode', icon: '⚡', description: 'Plant trees as fast as possible', color: 'text-yellow-500' }
+];
 
   const isLevelUnlocked = (level: number): boolean => {
     if (level === 1) return true;
-    const prevLevel = level - 1;
-    return gameProgress[selectedGrade]?.[prevLevel] || false;
+    return gameProgress[selectedGrade]?.[level - 1] || false;
   };
 
   const isLevelCompleted = (level: number): boolean => {
@@ -46,48 +53,81 @@ const TreePlantingGame: React.FC = () => {
         }
       }));
     }
-    
-    setTimeout(() => {
-      setCurrentLevel(null);
-    }, 2000);
+
+    setTimeout(() => setCurrentLevel(null), 2000);
   };
 
   const renderLevelGrid = () => {
     const levels = Array.from({ length: 50 }, (_, i) => i + 1);
-    
+
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {levels.map(level => {
-          const isUnlocked = isLevelUnlocked(level);
-          const isCompleted = isLevelCompleted(level);
-          
-          return (
-            <GameCard
-              key={level}
-              level={level}
-              isLocked={!isUnlocked}
-              treesPlanted={isCompleted ? 10 : 0}
-              maxTrees={10}
-              onPlay={() => setCurrentLevel(level)}
-            />
-          );
-        })}
+        {levels.map(level => (
+          <GameCard
+            key={level}
+            level={level}
+            isLocked={!isLevelUnlocked(level)}
+            treesPlanted={isLevelCompleted(level) ? 10 : 0}
+            maxTrees={10}
+            onPlay={() => setCurrentLevel(level)}
+          />
+        ))}
       </div>
     );
   };
 
-  if (currentLevel) {
+  // ----------------------------------------------------------
+  // NEW: Show mode selection FIRST
+  // ----------------------------------------------------------
+  /* if (!gameMode) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-sky-100 to-green-100 p-4">
-        <EnhancedGameBoard
-          level={currentLevel}
-          onComplete={handleLevelComplete}
-          onBack={() => setCurrentLevel(null)}
-        />
+      <div className="min-h-screen bg-gradient-to-b from-sky-100 to-green-100 p-6">
+        <GameModeSelector onSelectMode={setGameMode} />
       </div>
     );
   }
+ */
+if (!gameMode) {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-sky-100 to-green-100 p-6">
+      <GameModeSelector
+        modes={gameModes}
+        selectedMode={null}
+        onModeSelect={(id) => setGameMode(gameModes.find(m => m.id === id) || null)}
+      />
+    </div>
+  );
+}
+  // ----------------------------------------------------------
+  // NEW: If mode is NOT Growth Mode, you can customize
+  // ----------------------------------------------------------
+ // Endless GRIT MODE — No levels
+if (gameMode.id === "grit") {
+  return (
+    <EnhancedGameBoard
+      level={0}                // ignored
+      mode="grit"              // NEW
+      onComplete={() => {}}
+      onBack={() => setGameMode(null)}
+    />
+  );
+}
 
+// Endless SPEED MODE — No levels
+if (gameMode.id === "speed") {
+  return (
+    <EnhancedGameBoard
+      level={0}                 // ignored
+      mode="speed"              // NEW
+      onComplete={() => {}}
+      onBack={() => setGameMode(null)}
+    />
+  );
+}
+
+  // ----------------------------------------------------------
+  // Growth mode selected → show level grid
+  // ----------------------------------------------------------
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-100 to-green-100 p-4">
       <div className="max-w-6xl mx-auto">
@@ -97,16 +137,11 @@ const TreePlantingGame: React.FC = () => {
               🌳 Tree Planting Adventure 🌳
             </CardTitle>
             <p className="text-lg opacity-90">
-              Complete missions with Growth & Grit modes! Water and fertilize to level up!
+              Complete missions with Growth & Grit modes!
             </p>
           </CardHeader>
         </Card>
-        
-        <GradeSelector 
-          selectedGrade={selectedGrade}
-          onGradeSelect={setSelectedGrade}
-        />
-        
+
         <Card className="shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-green-800">
