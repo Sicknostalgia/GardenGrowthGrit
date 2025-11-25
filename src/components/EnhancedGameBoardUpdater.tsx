@@ -25,7 +25,6 @@ interface TreeState {
 
 const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, onComplete, onBack }) => {
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
-  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [selectedAction, setSelectedAction] = useState<string | null>('plant');
   const [trees, setTrees] = useState<TreeState[]>([]);
   const [resources, setResources] = useState({ water: 10, fertilizer: 5, seeds: 15 });
@@ -112,7 +111,7 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, onComplete
         return tree;
       }));
       setResources(prev => ({ ...prev, fertilizer: prev.fertilizer - 1 }));
-     // setActionCooldowns(prev => ({ ...prev, fertilize: 5 }));
+
       updateMission('3', 1);
     }
   };
@@ -126,17 +125,7 @@ const forbiddenZones = [   // new
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
-/*      // Check forbidden zones only in Grit mode
-  if (mode === 'grit') { //new
-    for (let zone of forbiddenZones) {
-      if (x >= zone.x && x <= zone.x + zone.width &&
-          y >= zone.y && y <= zone.y + zone.height) {
-        alert("🚫 Cannot plant here!");
-        return;
-      }
-    }
-  } */
+
     if (resources.seeds > 0) {
        // 🌱 First-ever tree → Start the timer
     if (trees.length === 0) {
@@ -175,54 +164,7 @@ const forbiddenZones = [   // new
     return '🌲';
   };
 
-/*   if (!selectedMode) {
-    return (
-      <div className="max-w-4xl mx-auto">
-         <Card className="mb-6">
-          <CardHeader className="text-center">
-            <CardTitle>Choose Your Game Mode - Level {level}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <GameModeSelector
-              modes={gameModes}
-              selectedMode={selectedMode}
-              onModeSelect={setSelectedMode}
-            />
-            <div className="text-center">
-              <Button onClick={onBack} variant="outline">Back to Levels</Button>
-            </div>
-          </CardContent>
-        </Card> 
-      </div>
-    );
-  } */
-/*  if (selectedMode && selectedLevel === null) {
-  return (
-    <div className="max-w-4xl mx-auto">
-      <Card className="mb-6">
-        <CardHeader className="text-center">
-          <CardTitle>Select Level</CardTitle>
-        </CardHeader>
 
-        <CardContent className="flex flex-col gap-3">
-          {[1, 2, 3, 4, 5].map(levelNum => (
-            <Button
-              key={levelNum}
-              onClick={() => setSelectedLevel(levelNum)}
-              className="w-full"
-            >
-              Level {levelNum}
-            </Button>
-          ))}
-
-          <Button onClick={() => setSelectedMode(null)} variant="outline">
-            Back to Modes
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-} */
 
 
   return (
@@ -247,18 +189,12 @@ const forbiddenZones = [   // new
         return true;
     }}
        }
-  /*        canAfford={(cost) => {
-    if (selectedAction === 'plant') return resources.seeds >= cost;
-    if (selectedAction === 'water') return resources.water >= cost;
-    if (selectedAction === 'fertilize') return resources.fertilizer >= cost;
-    return false;
-  }} */
+
       />
       
       <Card>
         <CardHeader className="text-center bg-gradient-to-r from-green-500 to-emerald-600 text-white">
           <CardTitle>Level {level} - {gameModes.find(m => m.id === selectedMode)?.name}</CardTitle>
-/* <CardTitle>Level {selectedLevel} - {gameModes.find(m => m.id === selectedMode)?.name}</CardTitle> */
 
           <div className="flex justify-between items-center mt-2">
             <span>Seeds: {resources.seeds} | Water: {resources.water} | Fertilizer: {resources.fertilizer}</span>
