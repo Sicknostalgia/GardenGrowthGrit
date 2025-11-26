@@ -55,7 +55,26 @@ const isEndless = mode === "grit" || mode === "speed";
       ]
     : []  // ❌ no missions for endless modes
 );
+// Add at the top of your component
+const [forbiddenZone, setForbiddenZone] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
+// Generate random forbidden zone
+const generateForbiddenZone = () => {
+  const coverage = 0.8; // 80%
+  const width = 100 * Math.sqrt(coverage);
+  const height = 100 * Math.sqrt(coverage);
+  const x = Math.random() * (100 - width);
+  const y = Math.random() * (100 - height);
+  return { x, y, width, height };
+};
+
+// Initialize forbidden zone when entering Grit mode
+useEffect(() => {
+  if (mode === "grit") {
+    setForbiddenZone(generateForbiddenZone());
+    setTrees([]);
+  }
+}, [mode]);
   const checkEarlyGameComplete = () => {
   const allDone = missions.every(m => m.completed === true);
 
@@ -91,6 +110,7 @@ if (!isEndless) checkEarlyGameComplete();
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+  
   const checkGameComplete = () => {
     setGameActive(false);
     const allCompleted = missions.every(m => m.completed);
@@ -122,52 +142,57 @@ if (!isEndless) updateMission('2', 1);
   if (!isEndless) updateMission('3', 1);
     }
   };
-const forbiddenZones = [
-  { id: "zone1", x: 50, y: 50, width: 120, height: 120 },
-  { id: "zone2", x: 300, y: 180, width: 150, height: 100 },
-];
-
   const handleBoardClick = (e: React.MouseEvent<HTMLDivElement>) => {
-if (!gameActive && trees.length > 0) return; // only block if game has ended
+  if (!gameActive && trees.length > 0) return;
 
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = ((e.clientX - rect.left) / rect.width) * 100;
+  const y = ((e.clientY - rect.top) / rect.height) * 100;
 
- if (mode === "grit") {
-    for (const zone of forbiddenZones) {
-      const inZone =
-        x >= zone.x &&
-        x <= zone.x + zone.width &&
-        y >= zone.y &&
-        y <= zone.y + zone.height;
+  // ❌ Check forbidden zone in Grit mode
+  if (mode === "grit" && forbiddenZone) {
+    const inZone =
+      x >= forbiddenZone.x &&
+      x <= forbiddenZone.x + forbiddenZone.width &&
+      y >= forbiddenZone.y &&
+      y <= forbiddenZone.y + forbiddenZone.height;
 
-      if (inZone) {
-        console.log("❌ Forbidden area in grit mode");
-        return; // stop planting
-      }
+    if (inZone) {
+      setGameActive(false);
+      setGameOverReason("forbidden");
+      onComplete(false);
+      return;
     }
   }
-    if (resources.seeds > 0) {
-       // 🌱 First-ever tree → Start the timer
-    if (trees.length === 0) {
-      setGameActive(true);
-    }
-      const newTree: TreeState = {
-        id: Date.now(),
-        x, y,
-        growth: 0,
-        watered: false,
-        fertilized: false,
-        stage: 'seed'
-      };
-      setTrees(prev => [...prev, newTree]); 
-      setResources(prev => ({ ...prev, seeds: prev.seeds - 1 }));
-if (!isEndless) updateMission('1', 1);
 
+  // ✅ Plant tree
+  if (resources.seeds > 0) {
+    if (trees.length === 0) setGameActive(true);
+
+    const newTree: TreeState = {
+      id: Date.now(),
+      x, y,
+      growth: 0,
+      watered: false,
+      fertilized: false,
+      stage: 'seed'
+    };
+
+    setTrees(prev => [...prev, newTree]);
+    setResources(prev => ({ ...prev, seeds: prev.seeds - 1 }));
+
+    // Reset forbidden zone after planting one tree
+    if (mode === "grit") {
+       setTimeout(() => {
+        setForbiddenZone(generateForbiddenZone());
+        setTrees([]); // remove previous trees
+      }, 500); // 500ms delay
     }
-  };
+
+
+    if (!isEndless) updateMission('1', 1);
+  }
+};
 
 
   const updateMission = (missionId: string, increment: number) => {
@@ -240,30 +265,27 @@ if (!isEndless) updateMission('1', 1);
     <div className="absolute bottom-0 w-full h-20 bg-gradient-to-t from-amber-600 to-green-400" />
 
     {/* ⛔ FORBIDDEN ZONES (GRIT & SPEED ONLY) */}
-  {isEndless && forbiddenZones.map(zone => (
+{mode === "grit" && forbiddenZone && (
   <div
-    key={zone.id}
-    onClick={(e) => {
-      e.stopPropagation();
-      console.log("❌ Forbidden zone clicked – Game Over");
-      setGameActive(false);
-      setGameOverReason('forbidden');   // <- track reason
-      onComplete(false);
-    }}
     style={{
       position: "absolute",
-      left: `${zone.x}px`,
-      top: `${zone.y}px`,
-      width: `${zone.width}px`,
-      height: `${zone.height}px`,
-      backgroundColor: "rgba(255, 0, 0, 0.25)",
-      border: "2px dashed red",
-      borderRadius: "8px",
-      cursor: "not-allowed",
+      left: `${forbiddenZone.x}%`,
+      top: `${forbiddenZone.y}%`,
+      width: `${forbiddenZone.width}%`,
+      height: `${forbiddenZone.height}%`,
+      fontSize: "2rem",
+      display: "grid",
+      gridTemplateColumns: `repeat(auto-fill, minmax(20px, 1fr))`,
+      gridTemplateRows: `repeat(auto-fill, minmax(20px, 1fr))`,
       zIndex: 5,
+      pointerEvents: "none", // allow planting outside the forbidden tiles
     }}
-  />
-))}
+  >
+    {Array.from({ length: Math.ceil(forbiddenZone.width / 5) * Math.ceil(forbiddenZone.height / 5) }).map((_, idx) => (
+      <div key={idx} className="flex items-center justify-center">🌾</div>
+    ))}
+  </div>
+)}
 
 
     {/* 🌳 TREES */}
