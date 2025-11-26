@@ -260,19 +260,23 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
           </CardTitle>
 
           <div className="flex justify-between items-center mt-2">
-            {/* 🌱 If Grit Mode → Infinite Seeds + hide Water/Fertilizer */}
+            {/* Left side: resources or round */}
             {mode === "grit" ? (
-              <span>Tree Planted: {round}</span>
+              <span>Round: {round}</span>
+            ) : mode === "speed" ? (
+              <span>Seeds: ∞ | Water: ∞ | Fertilizer: ∞</span>
             ) : (
               <span>
                 Seeds: {resources.seeds} | Water: {resources.water} | Fertilizer: {resources.fertilizer}
               </span>
             )}
 
-
-            {/* ⏳ Grit Mode → Infinite Time */}
-            <span>Time: {mode === "grit" ? "∞" : `${timeLeft}s`}</span>
+            {/* Right side: time */}
+            <span>
+              Time: {mode === "grit" ? "∞" : `${timeLeft}s`}
+            </span>
           </div>
+
         </CardHeader>
 
 
