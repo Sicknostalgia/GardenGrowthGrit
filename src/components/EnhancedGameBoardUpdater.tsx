@@ -33,6 +33,7 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
   const [timeLeft, setTimeLeft] = useState(25);
   const [gameActive, setGameActive] = useState(false);
   const [cursorPos, setCursorPos] = useState < { x: number; y: number } | null > (null);
+  const [round, setRound] = useState(1);
 
   const gameModes: GameMode[] = [
     { id: 'growth', name: 'Growth Mode', icon: '🌱', description: 'Focus on growing healthy trees', color: 'text-green-500' },
@@ -181,6 +182,10 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
       };
 
       setTrees(prev => [...prev, newTree]);
+      // 🌱 Grit mode → increase round for each successful plant
+      if (mode === "grit") {
+        setRound(prev => prev + 1);
+      }
       setResources(prev => ({ ...prev, seeds: prev.seeds - 1 }));
 
       // Reset forbidden zone after planting one tree
@@ -188,6 +193,7 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
         setTimeout(() => {
           setForbiddenZone(generateForbiddenZone());
           setTrees([]); // remove previous trees
+
         }, 500); // 500ms delay
       }
 
@@ -256,12 +262,13 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
           <div className="flex justify-between items-center mt-2">
             {/* 🌱 If Grit Mode → Infinite Seeds + hide Water/Fertilizer */}
             {mode === "grit" ? (
-              <span>Seeds: ∞</span>
+              <span>Tree Planted: {round}</span>
             ) : (
               <span>
                 Seeds: {resources.seeds} | Water: {resources.water} | Fertilizer: {resources.fertilizer}
               </span>
             )}
+
 
             {/* ⏳ Grit Mode → Infinite Time */}
             <span>Time: {mode === "grit" ? "∞" : `${timeLeft}s`}</span>
