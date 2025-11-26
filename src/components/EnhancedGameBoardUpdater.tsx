@@ -254,25 +254,35 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
           </CardTitle>
 
           <div className="flex justify-between items-center mt-2">
-            <span>Seeds: {resources.seeds} | Water: {resources.water} | Fertilizer: {resources.fertilizer}</span>
-            <span>Time: {timeLeft}s</span>
+            {/* 🌱 If Grit Mode → Infinite Seeds + hide Water/Fertilizer */}
+            {mode === "grit" ? (
+              <span>Seeds: ∞</span>
+            ) : (
+              <span>
+                Seeds: {resources.seeds} | Water: {resources.water} | Fertilizer: {resources.fertilizer}
+              </span>
+            )}
+
+            {/* ⏳ Grit Mode → Infinite Time */}
+            <span>Time: {mode === "grit" ? "∞" : `${timeLeft}s`}</span>
           </div>
         </CardHeader>
 
+
         <CardContent className="p-0">
           <div
-             className="relative h-96 bg-gradient-to-b from-sky-200 to-green-300 cursor-pointer overflow-hidden"
-  onClick={handleBoardClick}
-  onMouseMove={(e) => {
-    if (mode === "grit") {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
-      setCursorPos({ x, y });
-    }
-  }}
-  onMouseLeave={() => setCursorPos(null)}
->
+            className="relative h-96 bg-gradient-to-b from-sky-200 to-green-300 cursor-pointer overflow-hidden"
+            onClick={handleBoardClick}
+            onMouseMove={(e) => {
+              if (mode === "grit") {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                setCursorPos({ x, y });
+              }
+            }}
+            onMouseLeave={() => setCursorPos(null)}
+          >
             {/* ⬇️ GROUND */}
             <div className="absolute bottom-0 w-full h-20 bg-gradient-to-t from-amber-600 to-green-400" />
 
@@ -303,20 +313,20 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
                 ))}
               </div>
             )}
-  {/* 🌱 Preview tree follows cursor */}
-  {mode === "grit" && cursorPos && (
-    <div
-      className="absolute text-2xl opacity-70 pointer-events-none"
-      style={{
-        left: `${cursorPos.x}%`,
-        top: `${cursorPos.y}%`,
-        transform: "translate(-50%, -50%)",
-        zIndex: 20,
-      }}
-    >
-      🌱
-    </div>
-  )}
+            {/* 🌱 Preview tree follows cursor */}
+            {mode === "grit" && cursorPos && (
+              <div
+                className="absolute text-2xl opacity-70 pointer-events-none"
+                style={{
+                  left: `${cursorPos.x}%`,
+                  top: `${cursorPos.y}%`,
+                  transform: "translate(-50%, -50%)",
+                  zIndex: 20,
+                }}
+              >
+                🌱
+              </div>
+            )}
 
 
             {/* 🌳 TREES */}
