@@ -55,14 +55,20 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
         { id: '2', name: 'Water Plants', description: 'Water 8 trees', target: 8, current: 0, icon: '💧', completed: false },
         { id: '3', name: 'Use Fertilizer', description: 'Fertilize 5 trees', target: 5, current: 0, icon: '🧪', completed: false }
       ]
-      : []  // ❌ no missions for endless modes
+      : mode === "speed"
+        ? [
+          { id: "1", name: "Fast Planting", description: "Plant 5 trees quickly", target: 5, current: 0, icon: "⚡", completed: false },
+          { id: "2", name: "Rapid Watering", description: "Water 4 trees", target: 4, current: 0, icon: "💦", completed: false },
+        ]
+        : []
   );
+
   // Add at the top of your component
   const [forbiddenZone, setForbiddenZone] = useState < { x: number; y: number; width: number; height: number } | null > (null);
 
   // Generate random forbidden zone
   const generateForbiddenZone = () => {
-    const coverage = 0.8; // 80%
+    const coverage = 0.5; // 50%
     const width = 100 * Math.sqrt(coverage);
     const height = 100 * Math.sqrt(coverage);
     const x = Math.random() * (100 - width);
@@ -132,7 +138,7 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
       }));
       setResources(prev => ({ ...prev, water: prev.water - 1 }));
       setActionCooldowns(prev => ({ ...prev, water: 2 }));
-      if (!isEndless) updateMission('2', 1);
+      if (mode !== "grit") updateMission('2', 1);
     } else if (selectedAction === 'fertilize' && resources.fertilizer > 0) {
       setTrees(prev => prev.map(tree => {
         if (tree.id === treeId && !tree.fertilized) {
@@ -142,7 +148,7 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
       }));
       setResources(prev => ({ ...prev, fertilizer: prev.fertilizer - 1 }));
 
-      if (!isEndless) updateMission('3', 1);
+      if (mode !== "grit") updateMission('3', 1);
     }
   };
   const handleBoardClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -169,47 +175,69 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
     }
 
     // ✅ Plant tree
-  if (trees.length === 0) setGameActive(true);
+    if (trees.length === 0) setGameActive(true);
 
-const newTree: TreeState = {
-  id: Date.now(),
-  x, y,
-  growth: 0,
-  watered: false,
-  fertilized: false,
-  stage: 'seed'
-};
+    const newTree: TreeState = {
+      id: Date.now(),
+      x, y,
+      growth: 0,
+      watered: false,
+      fertilized: false,
+      stage: 'seed'
+    };
 
-setTrees(prev => [...prev, newTree]);
+    setTrees(prev => [...prev, newTree]);
 
-if (mode === "grit") {
-  setRound(prev => prev + 1);
-  // Reset forbidden zone and remove trees after delay
-  setTimeout(() => {
-    setForbiddenZone(generateForbiddenZone());
-    setTrees([]); // remove previous trees
-  }, 500);
-} else if (mode === "speed") {
-  // Optionally: add 15s to timeLeft after mission complete
-  // setTimeLeft(prev => prev + 15);
-} else {
-  // Normal growth mode
-  setResources(prev => ({ ...prev, seeds: prev.seeds - 1 }));
-  if (!isEndless) updateMission('1', 1);
-}
+    if (mode === "grit") {
+      setRound(prev => prev + 1);
+      // Reset forbidden zone and remove trees after delay
+      setTimeout(() => {
+        setForbiddenZone(generateForbiddenZone());
+        setTrees([]); // remove previous trees
+      }, 500);
+    } else if (mode === "speed") {
+      // Optionally: add 15s to timeLeft after mission complete
+      // setTimeLeft(prev => prev + 15);
+    } else if (mode === "speed") {
+      // 🌱 Update Fast Planting mission
+      updateMission("1", 1);
+    } else {
+      // Normal growth mode
+      setResources(prev => ({ ...prev, seeds: prev.seeds - 1 }));
+      updateMission('1', 1);
+    }
+
+    if (mode === "speed") {
+      const allComplete = missions.every(m => m.completed);
+      if (allComplete) setTimeLeft(prev => prev + 15);
+    }
+
 
   };
-
 
   const updateMission = (missionId: string, increment: number) => {
-    setMissions(prev => prev.map(mission => {
-      if (mission.id === missionId && !mission.completed) {
-        const newCurrent = Math.min(mission.current + increment, mission.target);
-        return { ...mission, current: newCurrent, completed: newCurrent >= mission.target };
+    setMissions(prev => {
+      // 1️⃣ Update mission values
+      const updatedMissions = prev.map(mission => {
+        if (mission.id === missionId && !mission.completed) {
+          const newCurrent = Math.min(mission.current + increment, mission.target);
+          return { ...mission, current: newCurrent, completed: newCurrent >= mission.target };
+        }
+        return mission;
+      });
+
+      // 2️⃣ Check if all complete for speed mode
+      if (mode === "speed" && updatedMissions.every(m => m.completed)) {
+        setTimeLeft(prevTime => prevTime + 15); // add 15s
+        // Reset missions for next round if you want continuous gameplay
+        const resetMissions = updatedMissions.map(m => ({ ...m, current: 0, completed: false }));
+        return resetMissions;
       }
-      return mission;
-    }));
+
+      return updatedMissions;
+    });
   };
+
 
 
   const getTreeIcon = (tree: TreeState) => {
@@ -224,7 +252,8 @@ if (mode === "grit") {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {!isEndless && <MissionTracker missions={missions} level={level} />}
+      {(mode === "growth" || mode === "speed") && <MissionTracker missions={missions} level={level} />}
+
 
       <GameActions
         actions={gameActions}
