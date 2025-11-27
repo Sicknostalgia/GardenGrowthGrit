@@ -169,37 +169,35 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
     }
 
     // ✅ Plant tree
-    if (resources.seeds > 0) {
-      if (trees.length === 0) setGameActive(true);
+  if (trees.length === 0) setGameActive(true);
 
-      const newTree: TreeState = {
-        id: Date.now(),
-        x, y,
-        growth: 0,
-        watered: false,
-        fertilized: false,
-        stage: 'seed'
-      };
+const newTree: TreeState = {
+  id: Date.now(),
+  x, y,
+  growth: 0,
+  watered: false,
+  fertilized: false,
+  stage: 'seed'
+};
 
-      setTrees(prev => [...prev, newTree]);
-      // 🌱 Grit mode → increase round for each successful plant
-      if (mode === "grit") {
-        setRound(prev => prev + 1);
-      }
-      setResources(prev => ({ ...prev, seeds: prev.seeds - 1 }));
+setTrees(prev => [...prev, newTree]);
 
-      // Reset forbidden zone after planting one tree
-      if (mode === "grit") {
-        setTimeout(() => {
-          setForbiddenZone(generateForbiddenZone());
-          setTrees([]); // remove previous trees
+if (mode === "grit") {
+  setRound(prev => prev + 1);
+  // Reset forbidden zone and remove trees after delay
+  setTimeout(() => {
+    setForbiddenZone(generateForbiddenZone());
+    setTrees([]); // remove previous trees
+  }, 500);
+} else if (mode === "speed") {
+  // Optionally: add 15s to timeLeft after mission complete
+  // setTimeLeft(prev => prev + 15);
+} else {
+  // Normal growth mode
+  setResources(prev => ({ ...prev, seeds: prev.seeds - 1 }));
+  if (!isEndless) updateMission('1', 1);
+}
 
-        }, 500); // 500ms delay
-      }
-
-
-      if (!isEndless) updateMission('1', 1);
-    }
   };
 
 
