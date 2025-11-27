@@ -93,6 +93,17 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
       // setShowGameOver(true);     // show game over screen if you have one
     }
   };
+  // 🔥 Make all resources unlimited in SPEED MODE
+  useEffect(() => {
+    if (mode === "speed") {
+      setResources({
+        water: Infinity,
+        fertilizer: Infinity,
+        seeds: Infinity
+      });
+    }
+  }, [mode]);
+
   useEffect(() => {
     if (!gameActive || trees.length === 0) return;
     if (!isEndless) checkEarlyGameComplete();
@@ -197,233 +208,245 @@ const EnhancedGameBoard: React.FC<EnhancedGameBoardProps> = ({ level, mode = "gr
       }, 500);
       return
     }
-      // -------------------------------------
-      // ⚡ SPEED MODE
-      // -------------------------------------
-      if (mode === "speed") {
-        // update mission progress
-        updateMission("1", 1);
+    // -------------------------------------
+    // ⚡ SPEED MODE
+    // -------------------------------------
+    if (mode === "speed") {
+      // update mission progress
+      updateMission("1", 1);
 
-        // check if ALL missions completed
-        const allComplete = missions.every(m => m.completed);
+      // check if ALL missions completed
+      const allComplete = missions.every(m => m.completed);
 
-        if (allComplete) {
-          setTimeLeft(prev => prev + 15); // add 15 seconds
-        }
-
-        return; // no resource deduction
+      if (allComplete) {
+        setTimeLeft(prev => prev + 15); // add 15 seconds
       }
 
-      // -------------------------------------
-      // 🌱 GROWTH MODE (normal mode)
-      // -------------------------------------
-      if (resources.seeds > 0) {
-        setResources(prev => ({ ...prev, seeds: prev.seeds - 1 }));
-        updateMission("1", 1);
-      }
-    };
+      return; // no resource deduction
+    }
 
-    const updateMission = (missionId: string, increment: number) => {
-      setMissions(prev => {
-        // 1️⃣ Update mission values
-        const updatedMissions = prev.map(mission => {
-          if (mission.id === missionId && !mission.completed) {
-            const newCurrent = Math.min(mission.current + increment, mission.target);
-            return { ...mission, current: newCurrent, completed: newCurrent >= mission.target };
-          }
-          return mission;
-        });
-
-        // 2️⃣ Check if all complete for speed mode
-        if (mode === "speed" && updatedMissions.every(m => m.completed)) {
-          setTimeLeft(prevTime => prevTime + 15); // add 15s
-          // Reset missions for next round if you want continuous gameplay
-          const resetMissions = updatedMissions.map(m => ({ ...m, current: 0, completed: false }));
-          return resetMissions;
-        }
-
-        return updatedMissions;
-      });
-    };
-
-
-
-    const getTreeIcon = (tree: TreeState) => {
-      if (tree.growth < 25) return '🌱';
-      if (tree.growth < 50) return '🌿';
-      if (tree.growth < 75) return '🌳';
-      return '🌲';
-    };
-
-
-
-
-    return (
-      <div className="max-w-4xl mx-auto">
-        {(mode === "growth" || mode === "speed") && <MissionTracker missions={missions} level={level} />}
-
-
-        <GameActions
-          actions={gameActions}
-          selectedAction={selectedAction}
-          onActionSelect={setSelectedAction}
-          actionCooldowns={actionCooldowns}
-          canAfford={(cost, actionId) => {
-            // Check resource and cooldown for the specific action
-            switch (actionId) {
-              case 'plant':
-                return resources.seeds >= cost && (actionCooldowns.plant ?? 0) <= 0;
-              case 'water':
-                return resources.water >= cost && (actionCooldowns.water ?? 0) <= 0;
-              case 'fertilize':
-                return resources.fertilizer >= cost && (actionCooldowns.fertilize ?? 0) <= 0;
-              default:
-                return true;
-            }
-          }
-          }
-
-        />
-
-        <Card>
-          <CardHeader className="text-center bg-gradient-to-r from-green-500 to-emerald-600 text-white">
-            <CardTitle>
-              {isEndless
-                ? (mode === "speed" ? "⚡ Speed Endless Mode" : "💪 Grit Endless Mode")
-                : `Level ${level} - Growth Mode`
-              }
-            </CardTitle>
-
-            <div className="flex justify-between items-center mt-2">
-              {/* Left side: resources or round */}
-              {mode === "grit" ? (
-                <span>Round: {round}</span>
-              ) : mode === "speed" ? (
-                <span>Seeds: ∞ | Water: ∞ | Fertilizer: ∞</span>
-              ) : (
-                <span>
-                  Seeds: {resources.seeds} | Water: {resources.water} | Fertilizer: {resources.fertilizer}
-                </span>
-              )}
-
-              {/* Right side: time */}
-              <span>
-                Time: {mode === "grit" ? "∞" : `${timeLeft}s`}
-              </span>
-            </div>
-
-          </CardHeader>
-
-
-          <CardContent className="p-0">
-            <div
-              className="relative h-96 bg-gradient-to-b from-sky-200 to-green-300 cursor-pointer overflow-hidden"
-              onClick={handleBoardClick}
-              onMouseMove={(e) => {
-                if (mode === "grit") {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const x = ((e.clientX - rect.left) / rect.width) * 100;
-                  const y = ((e.clientY - rect.top) / rect.height) * 100;
-                  setCursorPos({ x, y });
-                }
-              }}
-              onMouseLeave={() => setCursorPos(null)}
-            >
-              {/* ⬇️ GROUND */}
-              <div className="absolute bottom-0 w-full h-20 bg-gradient-to-t from-amber-600 to-green-400" />
-
-              {/* ⛔ FORBIDDEN ZONE FOR GRIT */}
-              {mode === "grit" && forbiddenZone && (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: `${forbiddenZone.x}%`,
-                    top: `${forbiddenZone.y}%`,
-                    width: `${forbiddenZone.width}%`,
-                    height: `${forbiddenZone.height}%`,
-                    backgroundColor: "rgba(0, 128, 0, 0.25)", // green box behind
-                    borderRadius: "8px",
-                    zIndex: 1,
-                    display: "grid",
-                    gridTemplateColumns: `repeat(auto-fill, 20px)`,
-                    gridTemplateRows: `repeat(auto-fill, 20px)`,
-                    gap: "2px",
-                    pointerEvents: "none", // so clicks pass through to handleBoardClick
-                  }}
-                >
-                  {/* Fill forbidden area with grass icons */}
-                  {Array.from({ length: Math.floor((forbiddenZone.width / 100) * 50) * Math.floor((forbiddenZone.height / 100) * 50) }).map((_, i) => (
-                    <div key={i} className="text-red-700 text-sm flex items-center justify-center">
-                      🌿
-                    </div>
-                  ))}
-                </div>
-              )}
-              {/* 🌱 Preview tree follows cursor */}
-              {mode === "grit" && cursorPos && (
-                <div
-                  className="absolute text-2xl opacity-70 pointer-events-none"
-                  style={{
-                    left: `${cursorPos.x}%`,
-                    top: `${cursorPos.y}%`,
-                    transform: "translate(-50%, -50%)",
-                    zIndex: 20,
-                  }}
-                >
-                  🌱
-                </div>
-              )}
-
-
-              {/* 🌳 TREES */}
-              {trees.map((tree) => (
-                <div
-                  key={tree.id}
-                  className="absolute text-3xl cursor-pointer hover:scale-110 transition-transform"
-                  style={{
-                    left: `${tree.x}%`,
-                    top: `${tree.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 10,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTreeClick(tree.id);
-                  }}
-                >
-                  {getTreeIcon(tree)}
-                </div>
-              ))}
-
-              {/* FIRST TIME HELP OVERLAY */}
-              {trees.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="bg-white/80 p-4 rounded-lg text-center">
-                    <div className="text-2xl mb-2">🌱</div>
-                    <div className="font-semibold">Click to plant trees!</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 flex justify-between">
-              <Button onClick={onBack} variant="outline">Back</Button>
-
-              {!gameActive && (
-                <div className="text-center font-bold">
-                  {gameOverReason === 'forbidden'
-                    ? '⏰ Try Again!'
-                    : (!isEndless && missions.every(m => m.completed)
-                      ? '🎉 Mission Complete!'
-                      : 'Try Again!')}
-                </div>
-              )}
-            </div>
-          </CardContent>
-
-        </Card>
-      </div>
-    );
+    // -------------------------------------
+    // 🌱 GROWTH MODE (normal mode)
+    // -------------------------------------
+    if (resources.seeds > 0) {
+      setResources(prev => ({ ...prev, seeds: prev.seeds - 1 }));
+      updateMission("1", 1);
+    }
   };
 
-  export default EnhancedGameBoard;
+ const updateMission = (missionId: string, increment: number) => {
+  setMissions(prev => {
+    // 1️⃣ Update mission values
+    const updatedMissions = prev.map(mission => {
+      if (mission.id === missionId && !mission.completed) {
+        const newCurrent = Math.min(mission.current + increment, mission.target);
+        return { ...mission, current: newCurrent, completed: newCurrent >= mission.target };
+      }
+      return mission;
+    });
+
+    // 2️⃣ Check if all complete for speed mode
+    if (mode === "speed" && updatedMissions.every(m => m.completed)) {
+
+      // Add bonus time
+      setTimeLeft(prevTime => prevTime + 15);
+
+      // 🔥 CLEAR ALL TREES ON SCREEN
+      setTrees([]);
+
+      // 🔄 Reset missions for next speed run
+      const resetMissions = updatedMissions.map(m => ({
+        ...m,
+        current: 0,
+        completed: false
+      }));
+
+      return resetMissions;  // ← RETURN MISSIONS (reset)
+    }
+
+    return updatedMissions; // ✅ RETURN NORMAL MISSIONS IF NOT ALL COMPLETE
+  });
+};
+
+
+
+
+  const getTreeIcon = (tree: TreeState) => {
+    if (tree.growth < 25) return '🌱';
+    if (tree.growth < 50) return '🌿';
+    if (tree.growth < 75) return '🌳';
+    return '🌲';
+  };
+
+
+
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      {(mode === "growth" || mode === "speed") && <MissionTracker missions={missions} level={level} />}
+
+
+      <GameActions
+        actions={gameActions}
+        selectedAction={selectedAction}
+        onActionSelect={setSelectedAction}
+        actionCooldowns={actionCooldowns}
+        canAfford={(cost, actionId) => {
+          // Check resource and cooldown for the specific action
+          switch (actionId) {
+            case 'plant':
+              return resources.seeds >= cost && (actionCooldowns.plant ?? 0) <= 0;
+            case 'water':
+              return resources.water >= cost && (actionCooldowns.water ?? 0) <= 0;
+            case 'fertilize':
+              return resources.fertilizer >= cost && (actionCooldowns.fertilize ?? 0) <= 0;
+            default:
+              return true;
+          }
+        }
+        }
+
+      />
+
+      <Card>
+        <CardHeader className="text-center bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+          <CardTitle>
+            {isEndless
+              ? (mode === "speed" ? "⚡ Speed Endless Mode" : "💪 Grit Endless Mode")
+              : `Level ${level} - Growth Mode`
+            }
+          </CardTitle>
+
+          <div className="flex justify-between items-center mt-2">
+            {/* Left side: resources or round */}
+            {mode === "grit" ? (
+              <span>Round: {round}</span>
+            ) : mode === "speed" ? (
+              <span>Seeds: ∞ | Water: ∞ | Fertilizer: ∞</span>
+            ) : (
+              <span>
+                Seeds: {resources.seeds} | Water: {resources.water} | Fertilizer: {resources.fertilizer}
+              </span>
+            )}
+
+            {/* Right side: time */}
+            <span>
+              Time: {mode === "grit" ? "∞" : `${timeLeft}s`}
+            </span>
+          </div>
+
+        </CardHeader>
+
+
+        <CardContent className="p-0">
+          <div
+            className="relative h-96 bg-gradient-to-b from-sky-200 to-green-300 cursor-pointer overflow-hidden"
+            onClick={handleBoardClick}
+            onMouseMove={(e) => {
+              if (mode === "grit") {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                setCursorPos({ x, y });
+              }
+            }}
+            onMouseLeave={() => setCursorPos(null)}
+          >
+            {/* ⬇️ GROUND */}
+            <div className="absolute bottom-0 w-full h-20 bg-gradient-to-t from-amber-600 to-green-400" />
+
+            {/* ⛔ FORBIDDEN ZONE FOR GRIT */}
+            {mode === "grit" && forbiddenZone && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: `${forbiddenZone.x}%`,
+                  top: `${forbiddenZone.y}%`,
+                  width: `${forbiddenZone.width}%`,
+                  height: `${forbiddenZone.height}%`,
+                  backgroundColor: "rgba(0, 128, 0, 0.25)", // green box behind
+                  borderRadius: "8px",
+                  zIndex: 1,
+                  display: "grid",
+                  gridTemplateColumns: `repeat(auto-fill, 20px)`,
+                  gridTemplateRows: `repeat(auto-fill, 20px)`,
+                  gap: "2px",
+                  pointerEvents: "none", // so clicks pass through to handleBoardClick
+                }}
+              >
+                {/* Fill forbidden area with grass icons */}
+                {Array.from({ length: Math.floor((forbiddenZone.width / 100) * 50) * Math.floor((forbiddenZone.height / 100) * 50) }).map((_, i) => (
+                  <div key={i} className="text-red-700 text-sm flex items-center justify-center">
+                    🌿
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* 🌱 Preview tree follows cursor */}
+            {mode === "grit" && cursorPos && (
+              <div
+                className="absolute text-2xl opacity-70 pointer-events-none"
+                style={{
+                  left: `${cursorPos.x}%`,
+                  top: `${cursorPos.y}%`,
+                  transform: "translate(-50%, -50%)",
+                  zIndex: 20,
+                }}
+              >
+                🌱
+              </div>
+            )}
+
+
+            {/* 🌳 TREES */}
+            {trees.map((tree) => (
+              <div
+                key={tree.id}
+                className="absolute text-3xl cursor-pointer hover:scale-110 transition-transform"
+                style={{
+                  left: `${tree.x}%`,
+                  top: `${tree.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 10,
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTreeClick(tree.id);
+                }}
+              >
+                {getTreeIcon(tree)}
+              </div>
+            ))}
+
+            {/* FIRST TIME HELP OVERLAY */}
+            {trees.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-white/80 p-4 rounded-lg text-center">
+                  <div className="text-2xl mb-2">🌱</div>
+                  <div className="font-semibold">Click to plant trees!</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 flex justify-between">
+            <Button onClick={onBack} variant="outline">Back</Button>
+
+            {!gameActive && (
+              <div className="text-center font-bold">
+                {gameOverReason === 'forbidden'
+                  ? '⏰ Try Again!'
+                  : (!isEndless && missions.every(m => m.completed)
+                    ? '🎉 Mission Complete!'
+                    : 'Try Again!')}
+              </div>
+            )}
+          </div>
+        </CardContent>
+
+      </Card>
+    </div>
+  );
+};
+
+export default EnhancedGameBoard;
